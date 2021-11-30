@@ -1,0 +1,24 @@
+{
+  "name": "ffmpeg_test",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@dmitrio/subtitle": "^4.1.1",
+    "aws-sdk": "^2.978.0",
+    "axios": "^0.21.4",
+    "body-parser": "^1.19.0",
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "fetch": "^1.1.0",
+    "fluent-ffmpeg": "^2.1.2",
+    "shlex": "^2.1.0",
+    "uuid": "^8.3.2"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
