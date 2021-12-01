@@ -1,24 +1,28 @@
 {
-  "name": "ffmpeg_test",
+  "name": "video-room-recording-processing",
   "version": "1.0.0",
-  "description": "",
+  "description": "Video Room Recording Processing",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
     "@dmitrio/subtitle": "^4.1.1",
-    "aws-sdk": "^2.978.0",
-    "axios": "^0.21.4",
-    "body-parser": "^1.19.0",
-    "cors": "^2.8.5",
-    "express": "^4.17.1",
-    "fetch": "^1.1.0",
-    "fluent-ffmpeg": "^2.1.2",
-    "shlex": "^2.1.0",
-    "uuid": "^8.3.2"
+    "aws-sdk": "^2.1035.0",
+    "concurrently": "^6.4.0",
+    "fluent-ffmpeg": "^2.1.2"
+  },
+  "engines": {
+    "node": ">=10"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "eslint": "^7.32.0",
+    "eslint-config-standard": "^16.0.3",
+    "eslint-plugin-import": "^2.25.3",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^5.2.0"
+  }
 }
