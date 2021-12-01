@@ -9,3 +9,4 @@ dist
 node_modules
 coverage
 jspm_packages
+output
