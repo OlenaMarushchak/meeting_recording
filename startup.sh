@@ -47,6 +47,7 @@ result_filepath_with_subtitles=$path/$MEETING_ID.mp4
 concurrently=/home/node_modules/.bin/concurrently
 get_file_list=/home/getFileList.js
 processor=/home/processor.js
+upload=/home/upload.js
 audio_path=$path/audio
 video_path=$path/video
 events_path=$path/meeting-events
@@ -84,4 +85,10 @@ echo "-----------------------------------------"
 echo "START: Adding subtitles..."
   ffmpeg -i $result_filepath_no_subtitles -vf subtitles=$ffmpeg_srt_path:force_style='Fontsize=10' $result_filepath_with_subtitles
 echo "END: Adding subtitles"
+echo "-----------------------------------------"
+################################################
+echo "-----------------------------------------"
+echo "START: Uploading the output to S3..."
+  node $upload $result_filepath_with_subtitles
+echo "END: Uploading the output to S3"
 echo "-----------------------------------------"

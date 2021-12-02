@@ -1,7 +1,8 @@
 const AWS = require("aws-sdk");
 const util = require("util");
 const fs = require("fs");
-const command = require("child_process").exec;
+const { spawn } = require("child_process");
+
 const ffmpeg = require("fluent-ffmpeg");
 const { stringifySync } = require("@dmitrio/subtitle");
 
@@ -26,37 +27,41 @@ const AttendeeVideoLeft = "AttendeeVideoLeft";
 const ContentShare = "ContentShare";
 const ActiveSpeaker = "ActiveSpeaker";
 
+function execFFMPEG (args) {
+  return new Promise(function (resolve, reject) {
+    console.log(`Running a command: ffmpeg ${args.join(" ")}`);
+    const process = spawn("ffmpeg", args, { stdio: "inherit" });
+    process.on("close", function (code) {
+      resolve(code);
+    });
+    process.on("error", function (err) {
+      reject(err);
+    });
+  });
+}
+
 function fetchUsersData (endDate) {
   return new Promise((resolve, reject) => {
-    // add search by meeting
-    // const startDateParsed = new Date(new Date(startDate).setSeconds(new Date(startDate).getSeconds() - 1));
-    const endDateParsed = new Date(new Date(endDate).setSeconds(new Date(endDate).getSeconds() + 1));
-
     const params = {
+      FilterExpression: "eventType = :eventType AND meetingId = :meetingId",
+      KeyConditionExpression: "breakoutSessionId = :breakoutSessionId",
       ExpressionAttributeValues: {
-        ":v1": {
+        ":breakoutSessionId": {
           N: SESSION_ID
         },
-        // TODO
-        // ":startDate":{
-        //     N: (+startDateParsed).toString()
-        // },
-        ":endDate": {
-          N: (+endDateParsed).toString()
+        ":eventType": {
+          S: attendeeJoinedEventType
+        },
+        ":meetingId": {
+          S: MEETING_ID
         }
       },
-      TableName: EVENTS_TABLE_NAME,
-      ExpressionAttributeNames: {
-        "#time": "timestamp"
-      },
-      ScanIndexForward: false,
-      KeyConditionExpression: "breakoutSessionId = :v1 AND #time <= :endDate" // #time BETWEEN :startDate AND :endDate
+      TableName: EVENTS_TABLE_NAME
     };
     DDB.query(params, function (err, data) {
       if (err) {
         reject(err);
       } else {
-        // TODO get start of meeting
         const usersData = data.Items.filter((item) => item.externalUserId)
           .map((item) => ({
             meetingId: item.meetingId.S,
@@ -66,14 +71,11 @@ function fetchUsersData (endDate) {
             attendeeId: item.attendeeId.S
           }));
 
-        const attendeeJoined = usersData.filter(({
-          eventType,
-          meetingId: usersMeeting
-        }) => eventType === attendeeJoinedEventType && usersMeeting === MEETING_ID);
         const usernamesMap = new Map();
-        attendeeJoined.forEach(({ attendeeId, externalUserId }) => {
-          const prepareUserId = externalUserId.split(":");
-          usernamesMap.set(attendeeId, prepareUserId[1]);
+        usersData.forEach(({ attendeeId, externalUserId }) => {
+          const [, username] = externalUserId.split(":");
+          if (!username) return;
+          usernamesMap.set(attendeeId, username);
         });
         resolve(usernamesMap);
       }
@@ -94,7 +96,7 @@ function concatContentChunks (pathToFile, pathToNewFile) {
         reject(err);
       })
       .on("stderr", function (stderrLine) {
-        console.log("Stderr output: " + stderrLine);
+        console.log(stderrLine);
       })
       .on("end", function () {
         console.log(`Concatenation of ${pathToFile} is done. Output is ${newPath}`);
@@ -103,35 +105,20 @@ function concatContentChunks (pathToFile, pathToNewFile) {
   });
 }
 
-function concatAudioAndVideo (audioPath, videoPath, index) {
-  // ffmpeg -i 1.mp4 -i 2.mp4 -filter_complex "[1] scale=480:270 [over]; [0][over] overlay=1440:0" output.mp4
+async function concatAudioAndVideo (audioPath, videoPath, index) {
   const resultPathNotScaled = `${MEETING_RECORDING_PATH}/${index}-not-scaled.mp4`;
   const resultPathScaled = `${MEETING_RECORDING_PATH}/${index}.mp4`;
-  return new Promise((resolve, reject) => {
-    command(
-      `ffmpeg -i ${videoPath} -i ${audioPath} -filter_complex "[1] scale=480:270 [over]; [0][over] overlay=1440:0" ${resultPathNotScaled}`,
-      function (err, res) {
-        if (err) {
-          console.error("An error occurred", err);
-          reject(err);
-        }
-        console.log(`Concatenation of ${audioPath} and ${videoPath} is done. Output is ${resultPathNotScaled}`);
-        resolve(resultPathNotScaled);
-      });
-  }).then(() => {
-    return new Promise((resolve, reject) => {
-      command(
-        `ffmpeg -i ${resultPathNotScaled} -vf scale=1280:720 -filter:v fps=fps=14.98 ${resultPathScaled}`,
-        function (err, res) {
-          if (err) {
-            console.error("An error occurred", err);
-            reject(err);
-          }
-          console.log(`Scaling of ${resultPathScaled} is done. Output is ${resultPathScaled}`);
-          resolve(resultPathScaled);
-        });
-    });
-  });
+
+  try {
+    await execFFMPEG(["-i", videoPath, "-i", audioPath, "-filter_complex", "[1] scale=480:270 [over]; [0][over] overlay=1440:0", resultPathNotScaled]);
+    console.log(`Concatenation of ${audioPath} and ${videoPath} is done. Output is ${resultPathNotScaled}`);
+    await execFFMPEG(["-i", resultPathNotScaled, "-vf", "scale=1280:720", "-filter:v", "fps=fps=14.98", resultPathScaled]);
+    console.log(`Scaling of ${resultPathScaled} is done. Output is ${resultPathScaled}`);
+    return resultPathScaled;
+  } catch (err) {
+    console.error("An error occurred", err);
+    throw err;
+  }
 }
 
 function convertEventToJson (txt) {

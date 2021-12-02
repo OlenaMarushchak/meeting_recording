@@ -11,6 +11,7 @@ RUN apk --no-cache add bash wget && \
 COPY ./startup.sh /home/startup.sh
 COPY ./getFileList.js /home/getFileList.js
 COPY ./processor.js /home/processor.js
+COPY ./upload.js /home/upload.js
 COPY ./package.json /home/package.json
 COPY ./package-lock.json /home/package-lock.json
 
