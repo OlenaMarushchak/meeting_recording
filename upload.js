@@ -3,7 +3,8 @@ const { argv } = require("process");
 const fs = require("fs");
 
 const FILE_PATH = argv[2];
-const BUCKET = process.env.BUCKET;
+const BUCKET = process.env.BUCKET;;
+const SESSION_ID = process.env.SESSION_ID;
 const MEETING_ID = process.env.MEETING_ID;
 
 async function uploadToS3 (fileName, filePath) {
@@ -21,7 +22,7 @@ async function uploadToS3 (fileName, filePath) {
     throw new Error(`file does not exist: ${filePath}`);
   }
 
-  const bucket = `${BUCKET}/output`;
+  const bucket = `${BUCKET}/output/${SESSION_ID}`;
 
   const s3 = new AWS.S3();
 
